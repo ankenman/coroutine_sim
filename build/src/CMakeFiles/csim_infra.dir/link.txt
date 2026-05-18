@@ -1,0 +1,2 @@
+/usr/bin/ar qc libcsim_infra.a CMakeFiles/csim_infra.dir/csim/core/module.cpp.o CMakeFiles/csim_infra.dir/csim/core/system.cpp.o CMakeFiles/csim_infra.dir/csim/utilities/work_queue.cpp.o CMakeFiles/csim_infra.dir/csim/core/payload.cpp.o CMakeFiles/csim_infra.dir/csim/utilities/cache.cpp.o CMakeFiles/csim_infra.dir/csim/utilities/delay_channel.cpp.o CMakeFiles/csim_infra.dir/csim/utilities/scheduled_event.cpp.o CMakeFiles/csim_infra.dir/csim/tracing/tracer.cpp.o
+/usr/bin/ranlib libcsim_infra.a

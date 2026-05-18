@@ -1,0 +1,15 @@
+# This is a generated file and its contents are an internal implementation detail.
+# The download step will be re-executed if anything in this file changes.
+# No other meaning or use of this file is supported.
+
+method=git
+command=/usr/local/bin/cmake;-DCMAKE_MESSAGE_LOG_LEVEL=VERBOSE;-P;/home/runner/work/coroutine_sim/coroutine_sim/build/_deps/fschuetz04_simcpp20-subbuild/fschuetz04_simcpp20-populate-prefix/tmp/fschuetz04_simcpp20-populate-gitclone.cmake
+source_dir=/home/runner/work/coroutine_sim/coroutine_sim/build/_deps/fschuetz04_simcpp20-src
+work_dir=/home/runner/work/coroutine_sim/coroutine_sim/build/_deps
+repository=https://github.com/fschuetz04/simcpp20
+remote=origin
+init_submodules=TRUE
+recurse_submodules=--recursive
+submodules=
+CMP0097=NEW
+      
