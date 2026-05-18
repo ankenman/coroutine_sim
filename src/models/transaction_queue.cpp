@@ -16,10 +16,10 @@ TransactionQueue::allocate(payload_ptr req) -> Entry*
     const addr_t    address = req->require_as<chi::chi_fields>().address;
 
     auto entry = std::make_unique<Entry>(Entry{
-        .txn_uid          = txn_uid,
-        .address          = address,
-        .hazard_done      = sim.event(),
-        .next_in_chain    = nullptr,
+        .txn_uid       = txn_uid,
+        .address       = address,
+        .hazard_done   = sim.event(),
+        .next_in_chain = nullptr,
     });
 
     Entry* entry_ptr = entry.get();

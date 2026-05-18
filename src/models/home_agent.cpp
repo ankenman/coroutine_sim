@@ -102,15 +102,16 @@ HomeAgent::handle_read_transaction(payload_ptr req) -> proc_t
     }
 }
 
-auto HomeAgent::read_miss_non_dmt(payload_ptr req) -> proc_t
+auto
+HomeAgent::read_miss_non_dmt(payload_ptr req) -> proc_t
 {
     const auto&  chi_in  = req->require_as<chi::chi_fields>();
     const addr_t address = chi_in.address;
     auto&        inbox   = *inboxes[req->txn_uid];
 
     // Forward REQ to target.
-    auto forward_req = create_req(*req, chi::ReqOpcode::ReadNoSnp, downstream_target_id);
-    const time_ps fwd_offset = static_cast<time_ps>(pipeline_latency_cycles) * clock_period_ps;
+    auto          forward_req = create_req(*req, chi::ReqOpcode::ReadNoSnp, downstream_target_id);
+    const time_ps fwd_offset  = static_cast<time_ps>(pipeline_latency_cycles) * clock_period_ps;
     outbound_req.push(fwd_offset, std::move(forward_req));
 
     // Wait for RDAT from target.
@@ -128,20 +129,21 @@ auto HomeAgent::read_miss_non_dmt(payload_ptr req) -> proc_t
         {{"opcode", std::string(name_of(rdat_payload->require_as<chi::chi_fields>().dat.opcode))}});
 
     // Build and queue CompData to requester.
-    auto data_return = create_dat(*req, chi::DatOpcode::CompData, chi_in.req.src_id);
-    const time_ps dat_offset = static_cast<time_ps>(pipeline_latency_cycles) * clock_period_ps;
+    auto          data_return = create_dat(*req, chi::DatOpcode::CompData, chi_in.req.src_id);
+    const time_ps dat_offset  = static_cast<time_ps>(pipeline_latency_cycles) * clock_period_ps;
     outbound_dat.push(dat_offset, std::move(data_return));
 }
 
-auto HomeAgent::read_miss_dmt(payload_ptr req) -> proc_t
+auto
+HomeAgent::read_miss_dmt(payload_ptr req) -> proc_t
 {
     const auto& chi_in = req->require_as<chi::chi_fields>();
     auto&       inbox  = *inboxes[req->txn_uid];
 
     // TODO: forward REQ with DMT directives (return_n_id = requester).
     // For now, this is the same as non-DMT forward.
-    auto forward_req = create_req(*req, chi::ReqOpcode::ReadNoSnp, downstream_target_id);
-    const time_ps fwd_offset = static_cast<time_ps>(pipeline_latency_cycles) * clock_period_ps;
+    auto          forward_req = create_req(*req, chi::ReqOpcode::ReadNoSnp, downstream_target_id);
+    const time_ps fwd_offset  = static_cast<time_ps>(pipeline_latency_cycles) * clock_period_ps;
     outbound_req.push(fwd_offset, std::move(forward_req));
 
     // Wait for Comp from target (no data — data went directly to requester).
@@ -151,10 +153,10 @@ auto HomeAgent::read_miss_dmt(payload_ptr req) -> proc_t
     auto target_response = std::move(inbox.pending.front());
     inbox.pending.pop();
 
-    tracer.instant(name, "received_dmt_comp", req->txn_uid, target_response->flit_id,
-                   chi_in.address,
-                   {{"opcode", std::string(name_of(
-                       target_response->require_as<chi::chi_fields>().dat.opcode))}});
+    tracer.instant(
+        name, "received_dmt_comp", req->txn_uid, target_response->flit_id, chi_in.address,
+        {{"opcode",
+          std::string(name_of(target_response->require_as<chi::chi_fields>().dat.opcode))}});
 
     // HA does NOT send CompData. Requester already has it (in DMT).
 }
@@ -266,15 +268,15 @@ HomeAgent::create_req(const Payload& source, chi::ReqOpcode opcode, uint32_t tgt
     const auto& source_chi = source.require_as<chi::chi_fields>();
     auto        payload    = std::make_shared<Payload>(source.txn_uid);
     payload->protocol      = chi::chi_fields{
-             .channel = chi::ChiChannel::REQ,
-             .address = source_chi.address,
-             .txn_id  = source_chi.txn_id,
-             .req =
-                 {
-                     .opcode = opcode,
-                     .src_id = id(),
-                     .tgt_id = tgt_id,
-                     .size   = source_chi.req.size,
+        .channel = chi::ChiChannel::REQ,
+        .address = source_chi.address,
+        .txn_id  = source_chi.txn_id,
+        .req =
+            {
+                .opcode = opcode,
+                .src_id = id(),
+                .tgt_id = tgt_id,
+                .size   = source_chi.req.size,
             },
     };
     return payload;
@@ -286,16 +288,16 @@ HomeAgent::create_dat(const Payload& source, chi::DatOpcode opcode, uint32_t tgt
     const auto& source_chi = source.require_as<chi::chi_fields>();
     auto        payload    = std::make_shared<Payload>(source.txn_uid);
     payload->protocol      = chi::chi_fields{
-             .channel = chi::ChiChannel::RDAT,
-             .address = source_chi.address,
-             .txn_id  = source_chi.txn_id,
-             .dat =
-                 {
-                     .opcode    = opcode,
-                     .src_id    = id(),
-                     .tgt_id    = tgt_id,
-                     .home_n_id = id(),
-                     .resp      = chi::Resp::UC_or_UD,
+        .channel = chi::ChiChannel::RDAT,
+        .address = source_chi.address,
+        .txn_id  = source_chi.txn_id,
+        .dat =
+            {
+                .opcode    = opcode,
+                .src_id    = id(),
+                .tgt_id    = tgt_id,
+                .home_n_id = id(),
+                .resp      = chi::Resp::UC_or_UD,
             },
     };
     return payload;
@@ -308,15 +310,15 @@ HomeAgent::create_rsp(const Payload& source, chi::RspOpcode opcode, uint32_t tgt
     const auto& source_chi = source.require_as<chi::chi_fields>();
     auto        payload    = std::make_shared<Payload>(source.txn_uid);
     payload->protocol      = chi::chi_fields{
-             .channel = chi::ChiChannel::CRSP,
-             .address = source_chi.address,
-             .txn_id  = source_chi.txn_id,
-             .rsp =
-                 {
-                     .opcode = opcode,
-                     .src_id = id(),
-                     .tgt_id = tgt_id,
-                     .dbid   = dbid,
+        .channel = chi::ChiChannel::CRSP,
+        .address = source_chi.address,
+        .txn_id  = source_chi.txn_id,
+        .rsp =
+            {
+                .opcode = opcode,
+                .src_id = id(),
+                .tgt_id = tgt_id,
+                .dbid   = dbid,
             },
     };
     return payload;
@@ -328,14 +330,14 @@ HomeAgent::create_snp(const Payload& source, chi::SnpOpcode opcode, uint32_t tgt
     const auto& source_chi = source.require_as<chi::chi_fields>();
     auto        payload    = std::make_shared<Payload>(source.txn_uid);
     payload->protocol      = chi::chi_fields{
-             .channel = chi::ChiChannel::SNP,
-             .address = source_chi.address,
-             .txn_id  = source_chi.txn_id,
-             .snp =
-                 {
-                     .opcode = opcode,
-                     .src_id = id(),
-                     .tgt_id = tgt_id,
+        .channel = chi::ChiChannel::SNP,
+        .address = source_chi.address,
+        .txn_id  = source_chi.txn_id,
+        .snp =
+            {
+                .opcode = opcode,
+                .src_id = id(),
+                .tgt_id = tgt_id,
             },
     };
     return payload;

@@ -30,7 +30,7 @@ public:
     {
         while (true) {
             co_await queue.wait();
-            observations.push_back({.when=sim.now(), .what=queue.pop()});
+            observations.push_back({.when = sim.now(), .what = queue.pop()});
         }
     }
 };

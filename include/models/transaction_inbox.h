@@ -26,7 +26,7 @@ public:
     std::queue<payload_ptr> pending;
 
 private:
-    sim_t&  sim;
+    sim_t&                 sim;
     std::optional<event_t> pending_arrival;
 
     std::optional<int> snoops_expected;

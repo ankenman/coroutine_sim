@@ -1,6 +1,6 @@
 # Requires clang version >= 3.8
 BasedOnStyle: LLVM
-Standard: Cpp20
+Standard: Latest
 #
 AccessModifierOffset: -4
 AlignConsecutiveAssignments: true
