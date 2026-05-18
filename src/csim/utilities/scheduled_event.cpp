@@ -32,7 +32,7 @@ ScheduledEvent::fire_after_delay(time_ps delay, uint64_t gen) -> proc_t
     if (gen != generation)
         co_return;
     pending_time.reset();
-    ev.trigger();          // trigger the existing ev, don't replace it
+    ev.trigger();     // trigger the existing ev, don't replace it
     ev = sim.event(); // re-arm for next use AFTER triggering
 }
 } // namespace csim

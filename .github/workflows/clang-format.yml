@@ -1,0 +1,41 @@
+name: clang-format
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  clang-format-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install clang-format
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-format
+
+      - name: Check formatting
+        run: |
+          # Find all C++ source and header files
+          files=$(find include src test -type f \( -name "*.cpp" -o -name "*.h" -o -name "*.hpp" \))
+
+          # Check each file with clang-format in dry-run mode
+          format_errors=0
+          for file in $files; do
+            if ! clang-format --dry-run --Werror "$file" 2>&1; then
+              format_errors=$((format_errors + 1))
+            fi
+          done
+
+          if [ $format_errors -gt 0 ]; then
+            echo ""
+            echo "::error::$format_errors file(s) have formatting issues"
+            echo "Run 'clang-format -i <file>' to fix them"
+            exit 1
+          fi
+
+          echo "All files properly formatted"

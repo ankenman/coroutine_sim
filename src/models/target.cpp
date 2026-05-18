@@ -24,9 +24,7 @@ Target::handle_request(payload_ptr payload) -> void
 {
     const auto& req_chi = payload->require_as<chi::chi_fields>();
 
-    tracer.instant(name, "received_req",
-                   payload->txn_uid, payload->flit_id,
-                   req_chi.address,
+    tracer.instant(name, "received_req", payload->txn_uid, payload->flit_id, req_chi.address,
                    {{"opcode", std::string(name_of(req_chi.req.opcode))},
                     {"txn_id", std::to_string(req_chi.txn_id)}});
 
@@ -45,11 +43,9 @@ Target::service_data_queue() -> proc_t
         auto payload = outbound_data.pop();
 
         const auto& chi_pl = payload->require_as<chi::chi_fields>();
-        tracer.instant(name, "sending_rdat",
-                      payload->txn_uid, payload->flit_id,
-                      chi_pl.address,
-                      {{"opcode", std::string(name_of(chi_pl.dat.opcode))},
-                       {"txn_id", std::to_string(chi_pl.txn_id)}});
+        tracer.instant(name, "sending_rdat", payload->txn_uid, payload->flit_id, chi_pl.address,
+                       {{"opcode", std::string(name_of(chi_pl.dat.opcode))},
+                        {"txn_id", std::to_string(chi_pl.txn_id)}});
 
         port.send(std::move(payload));
     }

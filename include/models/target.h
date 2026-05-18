@@ -30,8 +30,8 @@ private:
     auto handle_request(payload_ptr payload) -> void;
     auto service_data_queue() -> proc_t;
 
-    static auto create_data_payload(const chi::chi_fields& req_chi, uint64_t txn_uid)
-        -> payload_ptr;
+    static auto create_data_payload(const chi::chi_fields& req_chi,
+                                    uint64_t               txn_uid) -> payload_ptr;
 };
 
 } // namespace csim
