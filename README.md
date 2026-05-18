@@ -1,6 +1,7 @@
 # coroutine_sim
 
-[![build-and-test](https://github.com/ankenman/coroutine_sim/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/ankenman/coroutine_sim/actions/workflows/build-and-test.yml)
+[![googletest](https://github.com/ankenman/coroutine_sim/actions/workflows/googletest.yml/badge.svg)](https://github.com/ankenman/coroutine_sim/actions/workflows/googletest.yml)
+
 [![clang-format](https://github.com/ankenman/coroutine_sim/actions/workflows/clang-format.yml/badge.svg)](https://github.com/ankenman/coroutine_sim/actions/workflows/clang-format.yml)
 
 A CHI-protocol cache-coherent SoC simulator built with simcpp20 coroutines.
