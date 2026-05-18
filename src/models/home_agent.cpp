@@ -268,15 +268,15 @@ HomeAgent::create_req(const Payload& source, chi::ReqOpcode opcode, uint32_t tgt
     const auto& source_chi = source.require_as<chi::chi_fields>();
     auto        payload    = std::make_shared<Payload>(source.txn_uid);
     payload->protocol      = chi::chi_fields{
-        .channel = chi::ChiChannel::REQ,
-        .address = source_chi.address,
-        .txn_id  = source_chi.txn_id,
-        .req =
-            {
-                .opcode = opcode,
-                .src_id = id(),
-                .tgt_id = tgt_id,
-                .size   = source_chi.req.size,
+             .channel = chi::ChiChannel::REQ,
+             .address = source_chi.address,
+             .txn_id  = source_chi.txn_id,
+             .req =
+                 {
+                     .opcode = opcode,
+                     .src_id = id(),
+                     .tgt_id = tgt_id,
+                     .size   = source_chi.req.size,
             },
     };
     return payload;
@@ -288,37 +288,37 @@ HomeAgent::create_dat(const Payload& source, chi::DatOpcode opcode, uint32_t tgt
     const auto& source_chi = source.require_as<chi::chi_fields>();
     auto        payload    = std::make_shared<Payload>(source.txn_uid);
     payload->protocol      = chi::chi_fields{
-        .channel = chi::ChiChannel::RDAT,
-        .address = source_chi.address,
-        .txn_id  = source_chi.txn_id,
-        .dat =
-            {
-                .opcode    = opcode,
-                .src_id    = id(),
-                .tgt_id    = tgt_id,
-                .home_n_id = id(),
-                .resp      = chi::Resp::UC_or_UD,
+             .channel = chi::ChiChannel::RDAT,
+             .address = source_chi.address,
+             .txn_id  = source_chi.txn_id,
+             .dat =
+                 {
+                     .opcode    = opcode,
+                     .src_id    = id(),
+                     .tgt_id    = tgt_id,
+                     .home_n_id = id(),
+                     .resp      = chi::Resp::UC_or_UD,
             },
     };
     return payload;
 }
 
 auto
-HomeAgent::create_rsp(const Payload& source, chi::RspOpcode opcode, uint32_t tgt_id, uint16_t dbid)
-    -> payload_ptr
+HomeAgent::create_rsp(const Payload& source, chi::RspOpcode opcode, uint32_t tgt_id,
+                      uint16_t dbid) -> payload_ptr
 {
     const auto& source_chi = source.require_as<chi::chi_fields>();
     auto        payload    = std::make_shared<Payload>(source.txn_uid);
     payload->protocol      = chi::chi_fields{
-        .channel = chi::ChiChannel::CRSP,
-        .address = source_chi.address,
-        .txn_id  = source_chi.txn_id,
-        .rsp =
-            {
-                .opcode = opcode,
-                .src_id = id(),
-                .tgt_id = tgt_id,
-                .dbid   = dbid,
+             .channel = chi::ChiChannel::CRSP,
+             .address = source_chi.address,
+             .txn_id  = source_chi.txn_id,
+             .rsp =
+                 {
+                     .opcode = opcode,
+                     .src_id = id(),
+                     .tgt_id = tgt_id,
+                     .dbid   = dbid,
             },
     };
     return payload;
@@ -330,14 +330,14 @@ HomeAgent::create_snp(const Payload& source, chi::SnpOpcode opcode, uint32_t tgt
     const auto& source_chi = source.require_as<chi::chi_fields>();
     auto        payload    = std::make_shared<Payload>(source.txn_uid);
     payload->protocol      = chi::chi_fields{
-        .channel = chi::ChiChannel::SNP,
-        .address = source_chi.address,
-        .txn_id  = source_chi.txn_id,
-        .snp =
-            {
-                .opcode = opcode,
-                .src_id = id(),
-                .tgt_id = tgt_id,
+             .channel = chi::ChiChannel::SNP,
+             .address = source_chi.address,
+             .txn_id  = source_chi.txn_id,
+             .snp =
+                 {
+                     .opcode = opcode,
+                     .src_id = id(),
+                     .tgt_id = tgt_id,
             },
     };
     return payload;
