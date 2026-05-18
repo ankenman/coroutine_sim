@@ -1,11 +1,16 @@
 # coroutine_sim
 
+[![build-and-test](https://github.com/ankenman/coroutine_sim/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/ankenman/coroutine_sim/actions/workflows/build-and-test.yml)
+[![clang-format](https://github.com/ankenman/coroutine_sim/actions/workflows/clang-format.yml/badge.svg)](https://github.com/ankenman/coroutine_sim/actions/workflows/clang-format.yml)
+
 A CHI-protocol cache-coherent SoC simulator built with simcpp20 coroutines.
 
 ## What it models
 
 - An **initiator** that issues ReadShared and WriteUniqueFull transactions on a cycle-driven schedule.
-- A **home agent** with a metadata-only cache, handling reads (forward to target on miss, direct response on hit) and writes (absorb locally, install line on data arrival). Each transaction runs as its own coroutine; address serialization is enforced by a TransactionQueue.
+- A **home agent** with a metadata-only cache, handling reads (forward to target on miss, direct response on hit) and
+  writes (absorb locally, install line on data arrival). Each transaction runs as its own coroutine; address
+  serialization is enforced by a TransactionQueue.
 - A **target** that services read requests with a configurable latency.
 - An **interconnect** that routes flits between modules by target id.
 
@@ -13,19 +18,25 @@ CHI transactions terminate correctly: reads via CompAck, writes via combined Com
 
 ## Approach
 
-The simulator uses a **coroutine-per-transaction** model in the home agent. Each incoming REQ spawns a coroutine that runs the full protocol flow top-to-bottom — cache lookup, optional refill, response, completion wait — with `co_await` at each protocol pause. Address-serialization is enforced by a TransactionQueue: transactions acquire a slot at coroutine entry, and same-address transactions queue behind the active head.
+The simulator uses a **coroutine-per-transaction** model in the home agent. Each incoming REQ spawns a coroutine that
+runs the full protocol flow top-to-bottom — cache lookup, optional refill, response, completion wait — with `co_await`
+at each protocol pause. Address-serialization is enforced by a TransactionQueue: transactions acquire a slot at
+coroutine entry, and same-address transactions queue behind the active head.
 
-This makes the protocol logic read as the protocol it models, rather than being distributed across callbacks and state-machine maps.
+This makes the protocol logic read as the protocol it models, rather than being distributed across callbacks and
+state-machine maps.
 
 ## Tracing
 
-The simulator emits structured events to `trace.jsonl` (one JSON event per line, crash-safe) and a human-readable `trace.txt`. The JSONL output is convertible to Chrome Trace format for visualization in Perfetto:
+The simulator emits structured events to `trace.jsonl` (one JSON event per line, crash-safe) and a human-readable
+`trace.txt`. The JSONL output is convertible to Chrome Trace format for visualization in Perfetto:
 
 ```bash
 python3 scripts/jsonl_to_perfetto.py trace.jsonl trace.json
 ```
 
-Open `trace.json` in https://ui.perfetto.dev. Each transaction appears as a track; per-flit events appear as rows within the track.
+Open `trace.json` in https://ui.perfetto.dev. Each transaction appears as a track; per-flit events appear as rows within
+the track.
 
 ## Project layout
 
@@ -58,8 +69,27 @@ cmake --build .
 
 Dependencies (simcpp20, magic_enum, googletest) are fetched automatically via CMake FetchContent.
 
+## Code style
+
+The project follows the rules in `.clang-format`. CI verifies formatting using **clang-format 18**; using a matching
+version locally is recommended to avoid spurious diffs.
+
+To check formatting locally:
+
+```bash
+find include src test -type f \( -name "*.cpp" -o -name "*.h" -o -name "*.hpp" \) -exec clang-format --dry-run --Werror {} +
+```
+
+To apply formatting in place:
+
+```bash
+find include src test -type f \( -name "*.cpp" -o -name "*.h" -o -name "*.hpp" \) -exec clang-format -i {} +
+```
+
 ## Status
 
-Functional for ReadShared and WriteUniqueFull on a single initiator, with TransactionQueue-based address hazard handling and per-transaction coroutine isolation.
+Functional for ReadShared and WriteUniqueFull on a single initiator, with TransactionQueue-based address hazard handling
+and per-transaction coroutine isolation.
 
-Planned: multiple initiators, ReadUnique / MakeUnique opcodes, snoop modeling (with structured per-peer expectations), DMT (Direct Memory Transfer) variants, eviction modeling, and statistics infrastructure.
+Planned: multiple initiators, ReadUnique / MakeUnique opcodes, snoop modeling (with structured per-peer expectations),
+DMT (Direct Memory Transfer) variants, eviction modeling, and statistics infrastructure.
