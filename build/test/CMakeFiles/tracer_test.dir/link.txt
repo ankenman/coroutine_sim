@@ -1,1 +1,0 @@
-/usr/bin/c++ -Wl,--dependency-file=CMakeFiles/tracer_test.dir/link.d CMakeFiles/tracer_test.dir/tracer_test.cpp.o -o tracer_test  ../lib/libgtest_main.a ../src/libcsim_models.a ../lib/libgtest.a ../src/libcsim_infra.a

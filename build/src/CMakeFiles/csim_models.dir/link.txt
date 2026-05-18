@@ -1,2 +1,0 @@
-/usr/bin/ar qc libcsim_models.a CMakeFiles/csim_models.dir/models/initiator.cpp.o CMakeFiles/csim_models.dir/models/target.cpp.o CMakeFiles/csim_models.dir/models/interconnect.cpp.o CMakeFiles/csim_models.dir/models/home_agent.cpp.o CMakeFiles/csim_models.dir/models/transaction_inbox.cpp.o CMakeFiles/csim_models.dir/models/transaction_queue.cpp.o
-/usr/bin/ranlib libcsim_models.a
