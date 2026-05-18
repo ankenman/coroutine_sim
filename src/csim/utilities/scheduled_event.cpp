@@ -11,14 +11,7 @@ ScheduledEvent::notify(time_ps delay) -> void
     ++generation;
     pending_time      = fire_at;
     const auto my_gen = generation;
-    [](ScheduledEvent& self, time_ps delay, uint64_t gen) -> simcpp20::process<time_ps> {
-        co_await self.sim.timeout(delay);
-        if (gen != self.generation)
-            co_return;
-        self.pending_time.reset();
-        self.ev.trigger();          // trigger the existing ev, don't replace it
-        self.ev = self.sim.event(); // re-arm for next use AFTER triggering
-    }(*this, delay, my_gen);
+    fire_after_delay(delay, my_gen);
 }
 auto
 ScheduledEvent::wait() -> simcpp20::event<time_ps>
@@ -30,5 +23,16 @@ ScheduledEvent::cancel()
 {
     ++generation;
     pending_time.reset();
+}
+
+auto
+ScheduledEvent::fire_after_delay(time_ps delay, uint64_t gen) -> proc_t
+{
+    co_await sim.timeout(delay);
+    if (gen != generation)
+        co_return;
+    pending_time.reset();
+    ev.trigger();          // trigger the existing ev, don't replace it
+    ev = sim.event(); // re-arm for next use AFTER triggering
 }
 } // namespace csim

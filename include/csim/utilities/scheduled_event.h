@@ -16,5 +16,8 @@ struct ScheduledEvent {
     auto notify(time_ps delay) -> void;
     auto wait() -> simcpp20::event<time_ps>;
     void cancel();
+
+private:
+    auto fire_after_delay(time_ps delay, uint64_t gen) -> proc_t;
 };
 } // namespace csim
