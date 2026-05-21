@@ -4,6 +4,7 @@ set(tests
         tracer_test.cpp
         transaction_inbox_test.cpp
         transaction_queue_test.cpp
+        config_test.cpp
 )
 
 foreach(test ${tests})
