@@ -35,8 +35,7 @@ protected:
     }
 
     // Helper: register a knob in module "test_mod".
-    template <typename T>
-    auto add_knob(const std::string& name, const T& default_value) -> Knob<T>&
+    template <typename T> auto add_knob(const std::string& name, const T& default_value) -> Knob<T>&
     {
         auto& kl = ConfigManager::instance().get_or_create("test_mod");
         return kl.add_knob(name, "test knob", default_value);
@@ -49,20 +48,20 @@ private:
 TEST_F(ParseCommandLineTest, NoArgsLeavesDefaults)
 {
     auto& clock_period = add_knob<int>("clock_period", 100);
-    
+
     auto argv = build_argv({"program"});
     ConfigManager::instance().parse_command_line(argv.size(), argv.data());
-    
+
     EXPECT_EQ(clock_period.get(), 100);
 }
 
 TEST_F(ParseCommandLineTest, SingleIntKnobOverride)
 {
     auto& clock_period = add_knob<int>("clock_period", 100);
-    
+
     auto argv = build_argv({"program", "--test_mod.clock_period", "250"});
     ConfigManager::instance().parse_command_line(argv.size(), argv.data());
-    
+
     EXPECT_EQ(clock_period.get(), 250);
 }
 
@@ -70,12 +69,11 @@ TEST_F(ParseCommandLineTest, MultipleKnobsOverride)
 {
     auto& clock_period = add_knob<int>("clock_period", 100);
     auto& buffer_size  = add_knob<int>("buffer_size", 1024);
-    
-    auto argv = build_argv({"program",
-                            "--test_mod.clock_period", "250",
-                            "--test_mod.buffer_size", "2048"});
+
+    auto argv =
+        build_argv({"program", "--test_mod.clock_period", "250", "--test_mod.buffer_size", "2048"});
     ConfigManager::instance().parse_command_line(argv.size(), argv.data());
-    
+
     EXPECT_EQ(clock_period.get(), 250);
     EXPECT_EQ(buffer_size.get(), 2048);
 }
@@ -83,20 +81,20 @@ TEST_F(ParseCommandLineTest, MultipleKnobsOverride)
 TEST_F(ParseCommandLineTest, BoolKnobWithoutValueSetsTrue)
 {
     auto& debug = add_knob<bool>("debug", false);
-    
+
     auto argv = build_argv({"program", "--test_mod.debug"});
     ConfigManager::instance().parse_command_line(argv.size(), argv.data());
-    
+
     EXPECT_TRUE(debug.get());
 }
 
 TEST_F(ParseCommandLineTest, BoolKnobWithFalseValue)
 {
     auto& debug = add_knob<bool>("debug", true);
-    
+
     auto argv = build_argv({"program", "--test_mod.debug", "false"});
     ConfigManager::instance().parse_command_line(argv.size(), argv.data());
-    
+
     EXPECT_FALSE(debug.get());
 }
 
@@ -118,7 +116,7 @@ TEST_F(ParseCommandLineTest, UnknownKnobLogsWarning)
 TEST_F(ParseCommandLineTest, NonStrictIgnoresUnknownKnob)
 {
     auto argv = build_argv({"program", "--unknown.knob", "5"});
-    
+
     EXPECT_NO_THROW(
         ConfigManager::instance().parse_command_line(argv.size(), argv.data(), /*strict=*/false));
 }
@@ -126,13 +124,11 @@ TEST_F(ParseCommandLineTest, NonStrictIgnoresUnknownKnob)
 TEST_F(ParseCommandLineTest, NonStrictPreservesValidKnobs)
 {
     auto& clock_period = add_knob<int>("clock_period", 100);
-    
-    auto argv = build_argv({"program",
-                            "--test_mod.clock_period", "250",
-                            "--unknown.knob", "999"});
-    
+
+    auto argv = build_argv({"program", "--test_mod.clock_period", "250", "--unknown.knob", "999"});
+
     ConfigManager::instance().parse_command_line(argv.size(), argv.data(), /*strict=*/false);
-    
+
     EXPECT_EQ(clock_period.get(), 250);
 }
 
@@ -141,18 +137,16 @@ TEST_F(ParseCommandLineTest, NonStrictPreservesValidKnobs)
 TEST_F(ParseCommandLineTest, TwoPassFirstNonStrictThenStrict)
 {
     auto& early_knob = add_knob<int>("early", 0);
-    
-    auto argv = build_argv({"program",
-                            "--test_mod.early", "1",
-                            "--test_mod.late", "2"});
-    
+
+    auto argv = build_argv({"program", "--test_mod.early", "1", "--test_mod.late", "2"});
+
     // First pass: non-strict; late knob ignored.
     ConfigManager::instance().parse_command_line(argv.size(), argv.data(), /*strict=*/false);
     EXPECT_EQ(early_knob.get(), 1);
-    
+
     // Register the late knob.
     auto& late_knob = add_knob<int>("late", 0);
-    
+
     // Second pass: strict; both are valid now.
     ConfigManager::instance().parse_command_line(argv.size(), argv.data(), /*strict=*/true);
     EXPECT_EQ(early_knob.get(), 1);
