@@ -7,7 +7,7 @@ add_library(csim_infra STATIC
         csim/utilities/delay_channel.cpp
         csim/utilities/scheduled_event.cpp
         csim/tracing/tracer.cpp
-        csim/config/config_manager.cpp
+        csim/config/config.cpp
         csim/config/knob_list.cpp
 )
 target_include_directories(csim_infra PUBLIC ${CMAKE_SOURCE_DIR}/include)
