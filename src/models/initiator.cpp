@@ -69,27 +69,16 @@ Initiator::start() -> void
 auto
 Initiator::tick_clock() -> proc_t
 {
-    std::cerr << "tick_clock starting, sim.now()=" << sim.now() << "\n";
     co_await sim.timeout(0);
-    std::cerr << "after timeout(0)\n";
 
     while (true) {
-        std::cerr << "loop iter, sim.now()=" << sim.now()
-                  << ", port_map.size()=" << port_map.size() << "\n";
         if (outbound_req.has_ready_payload()) {
             auto payload        = outbound_req.pop();
             payload->start_time = sim.now();
             const auto& chi     = payload->require_as<chi::chi_fields>();
             tracer.instant(name, "sending_req", payload->txn_uid, payload->flit_id, chi.address,
                            {{"opcode", std::string(name_of(chi.req.opcode))}});
-            std::cerr << "req ready, port_map.size()=" << port_map.size() << "\n";
-            if (port_map.size() != 1) {
-                std::cerr << "PROBLEM: expected 1 port, have " << port_map.size() << "\n";
-            }
-            Port& p = single_port();
-            std::cerr << "got single port\n";
-            p.send(std::move(payload));
-            // single_port().send(std::move(payload));
+            single_port().send(std::move(payload));
         }
         if (outbound_wdat.has_ready_payload()) {
             auto        payload = outbound_wdat.pop();
@@ -135,7 +124,7 @@ Initiator::handle_rdat(payload_ptr response) -> void
     auto it = outstanding_txns.find(response->txn_uid);
     assert(it != outstanding_txns.end() && "received response for unknown txn_uid");
 
-    const auto& original_request = it->second.request; // .request, was bare payload_ptr
+    const auto& original_request = it->second.request;     
     const auto  latency          = sim.now() - original_request->start_time;
 
     tracer.instant(
