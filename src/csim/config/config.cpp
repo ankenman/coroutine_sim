@@ -12,9 +12,6 @@
 
 namespace csim::config {
 namespace {
-
-// Internal state — invisible outside this TU
-std::mutex                                                 state_mutex;
 std::unordered_map<std::string, std::unique_ptr<KnobList>> module_knob_lists;
 std::unordered_map<std::string, KnobBase*>                 all_knobs;
 std::vector<std::string>                                   module_order;
@@ -42,8 +39,6 @@ set_knob_value(const std::string& key, const std::string& value) -> void
 auto
 get_or_create(const std::string& module_name) -> KnobList&
 {
-    std::lock_guard<std::mutex> lock(state_mutex);
-
     if (module_knob_lists.find(module_name) == module_knob_lists.end()) {
         module_knob_lists[module_name] = std::make_unique<KnobList>(module_name);
         module_order.push_back(module_name);
@@ -60,7 +55,6 @@ get_or_create(const char* module_name) -> KnobList&
 auto
 register_knob(const std::string& full_name, KnobBase* knob) -> void
 {
-    std::lock_guard<std::mutex> lock(state_mutex);
     all_knobs[full_name] = knob;
 }
 
@@ -68,11 +62,6 @@ auto
 parse_command_line(int argc, char* argv[], bool strict) -> void
 {
     // Priority: JSON (lowest) -> config file -> command line args (highest)
-    //
-    // We deliberately do NOT hold state_mutex across the whole function because
-    // parse_json_file / parse_config_file acquire it themselves. The original
-    // code worked around this by unlock/relock dancing; the cleaner fix is to
-    // only lock around the actual state mutations below.
 
     current_strict = strict;
 
@@ -113,7 +102,6 @@ parse_command_line(int argc, char* argv[], bool strict) -> void
     }
 
     // Final pass: command line args (highest priority)
-    std::lock_guard<std::mutex> lock(state_mutex);
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
 
@@ -130,9 +118,7 @@ parse_command_line(int argc, char* argv[], bool strict) -> void
         if (arg == "--dump-config") {
             if (i + 1 < argc) {
                 // write_config_file locks internally; release ours briefly.
-                state_mutex.unlock();
                 write_config_file(argv[++i]);
-                state_mutex.lock();
                 std::cout << "Configuration written to " << argv[i] << "\n";
             }
             else {
@@ -143,9 +129,7 @@ parse_command_line(int argc, char* argv[], bool strict) -> void
 
         if (arg == "--dump-json") {
             if (i + 1 < argc) {
-                state_mutex.unlock();
                 write_json_file(argv[++i]);
-                state_mutex.lock();
                 std::cout << "JSON configuration written to " << argv[i] << "\n";
             }
             else {
@@ -182,8 +166,6 @@ parse_command_line(int argc, char* argv[], bool strict) -> void
 auto
 parse_config_file(const std::string& filename) -> void
 {
-    std::lock_guard<std::mutex> lock(state_mutex);
-
     std::ifstream file(filename);
     if (!file.is_open()) {
         throw std::runtime_error("Failed to open config file: " + filename);
@@ -233,8 +215,6 @@ parse_config_file(const std::string& filename) -> void
 auto
 parse_json_file(const std::string& filename) -> void
 {
-    std::lock_guard<std::mutex> lock(state_mutex);
-
     std::ifstream file(filename);
     if (!file.is_open()) {
         throw std::runtime_error("Failed to open JSON file: " + filename);
@@ -278,8 +258,6 @@ parse_json_file(const std::string& filename) -> void
 auto
 write_json_file(const std::string& filename) -> void
 {
-    std::lock_guard<std::mutex> lock(state_mutex);
-
     nlohmann::json j;
 
     for (const auto& module_name : module_order) {
@@ -320,8 +298,6 @@ write_json_file(const std::string& filename) -> void
 auto
 write_config_file(const std::string& filename, bool verbose) -> void
 {
-    std::lock_guard<std::mutex> lock(state_mutex);
-
     std::ofstream file(filename);
     if (!file.is_open()) {
         throw std::runtime_error("Failed to open config file for writing: " + filename);
@@ -358,8 +334,6 @@ write_config_file(const std::string& filename, bool verbose) -> void
 auto
 print_help() -> void
 {
-    std::lock_guard<std::mutex> lock(state_mutex);
-
     std::cout << "Available knobs:\n\n";
 
     size_t max_name_len = 0;
@@ -414,15 +388,13 @@ check_for_help(int argc, char* argv[]) -> void
 auto
 get_knob(const std::string& full_name) -> KnobBase*
 {
-    std::lock_guard<std::mutex> lock(state_mutex);
-    auto                        it = all_knobs.find(full_name);
+    auto it = all_knobs.find(full_name);
     return (it != all_knobs.end()) ? it->second : nullptr;
 }
 
 auto
 reset_all() -> void
 {
-    std::lock_guard<std::mutex> lock(state_mutex);
     for (auto& [name, knob_list] : module_knob_lists) {
         knob_list->reset_all();
     }
@@ -431,7 +403,6 @@ reset_all() -> void
 auto
 clear() -> void
 {
-    std::lock_guard<std::mutex> lock(state_mutex);
     all_knobs.clear();
     module_knob_lists.clear();
     module_order.clear();
@@ -440,8 +411,6 @@ clear() -> void
 auto
 remove_module(const std::string& module_name) -> void
 {
-    std::lock_guard<std::mutex> lock(state_mutex);
-
     auto module_it = module_knob_lists.find(module_name);
     if (module_it == module_knob_lists.end())
         return;
