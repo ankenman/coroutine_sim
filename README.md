@@ -22,6 +22,25 @@ The simulator uses a **coroutine-per-transaction** model in the home agent. Each
 
 This makes the protocol logic read as the protocol it models, rather than being distributed across callbacks and state-machine maps.
 
+## Topology and configuration
+
+The SoC layout is described by a JSON topology file. Each module declares its name, type, id, neighbors, and per-module configuration values. The topology loader constructs modules, applies their config, and wires ports based on the neighbor lists.
+
+```bash
+./coroutine_sim --topology example/topology.json
+```
+
+Per-module parameters (clock period, latencies, queue capacities, etc.) are exposed as knobs and can be overridden from the command line or a separate config file:
+
+```bash
+./coroutine_sim --topology example/topology.json --ha0.cache_hit_latency_cycles 5
+./coroutine_sim --topology example/topology.json --config my_overrides.txt
+./coroutine_sim --topology example/topology.json --json my_overrides.json
+./coroutine_sim --topology example/topology.json --help    # lists all registered knobs
+```
+
+The example topology under `example/topology.json` shows a minimal initiator → interconnect → home agent → target chain.
+
 ## Tracing
 
 The simulator emits structured events to `trace.jsonl` (one JSON event per line, crash-safe) and a human-readable `trace.txt`. The JSONL output is convertible to Chrome Trace format for visualization in Perfetto:
@@ -32,17 +51,6 @@ python3 scripts/jsonl_to_perfetto.py trace.jsonl trace.json
 
 Open `trace.json` in https://ui.perfetto.dev. Each transaction appears as a track; per-flit events appear as rows within the track.
 
-## Configuration
-
-Modules expose tunable parameters via a knob system. Each module registers its knobs at construction; values can be set from the command line or a JSON/text config file:
-
-```bash
-./coroutine_sim --ha0.cache_hit_latency_cycles 5 --ha0.tq_capacity 16
-./coroutine_sim --config myconfig.txt
-./coroutine_sim --json myconfig.json
-./coroutine_sim --help    # lists all registered knobs
-```
-
 ## Project layout
 
 ```
@@ -51,8 +59,9 @@ include/
     core/                module, system, port, payload, sim_types
     utilities/           work_queue, delay_channel, scheduled_event, cache
     tracing/             tracer
-    config/              knob system, ConfigManager
-  models/                CHI simulation components (HA, RN, SN, interconnect)
+    config/              knob system, csim::config namespace
+  models/                CHI simulation components (HA, initiator, target,
+                         interconnect, topology loader)
   protocols/             CHI enum and field definitions
 src/
   csim/                  framework implementations
@@ -60,6 +69,7 @@ src/
   main.cpp               top-level simulation setup
 test/                    unit tests (googletest)
 scripts/                 utilities (Perfetto trace conversion)
+example/                 example topology JSON files
 ```
 
 ## Building
@@ -70,7 +80,7 @@ Requires a C++20 compiler and CMake 3.14+.
 mkdir build && cd build
 cmake ..
 cmake --build .
-./src/coroutine_sim
+./src/coroutine_sim --topology ../example/topology.json
 ```
 
 Dependencies (simcpp20, magic_enum, nlohmann/json, googletest) are fetched automatically via CMake FetchContent.
@@ -93,6 +103,6 @@ find include src test -type f \( -name "*.cpp" -o -name "*.h" -o -name "*.hpp" \
 
 ## Status
 
-Functional for ReadShared and WriteUniqueFull on a single initiator, with TransactionQueue-based address hazard handling and per-transaction coroutine isolation.
+Functional for ReadShared and WriteUniqueFull with JSON-driven topology, per-module knob configuration, and TransactionQueue-based address hazard handling.
 
-Planned: multiple initiators, ReadUnique / MakeUnique opcodes, snoop modeling (with structured per-peer expectations), DMT (Direct Memory Transfer) variants, eviction modeling, and statistics infrastructure.
+Planned: multiple initiators, ReadUnique / MakeUnique opcodes, snoop modeling (with structured per-peer expectations), DMT (Direct Memory Transfer) variants, eviction modeling, statistics infrastructure, and System Address Map for routing by address across multiple HNs.
