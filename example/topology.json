@@ -1,0 +1,43 @@
+{
+  "modules": [
+    {
+      "name": "init0",
+      "type": "initiator",
+      "id": 0,
+      "neighbors": ["ic0"],
+      "config": {
+        "clock_period_ps": 1000,
+        "home_id": 1
+      }
+    },
+    {
+      "name": "ic0",
+      "type": "interconnect",
+      "id": 100,
+      "neighbors": ["init0", "ha0", "tgt0"]
+    },
+    {
+      "name": "ha0",
+      "type": "home_agent",
+      "id": 1,
+      "neighbors": ["ic0"],
+      "config": {
+        "clock_period_ps": 1000,
+        "downstream_target_id": 2,
+        "cache_hit_latency_cycles": 3,
+        "pipeline_latency_cycles": 5,
+        "tq_capacity": 8
+      }
+    },
+    {
+      "name": "tgt0",
+      "type": "target",
+      "id": 2,
+      "neighbors": ["ic0"],
+      "config": {
+        "clock_period_ps": 1000,
+        "data_latency_cycles": 50
+      }
+    }
+  ]
+}

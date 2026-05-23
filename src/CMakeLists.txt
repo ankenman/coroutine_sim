@@ -9,6 +9,7 @@ add_library(csim_infra STATIC
         csim/tracing/tracer.cpp
         csim/config/config.cpp
         csim/config/knob_list.cpp
+        csim/config/topology_loader.cpp
 )
 target_include_directories(csim_infra PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(csim_infra PUBLIC fschuetz04::simcpp20 magic_enum::magic_enum nlohmann_json::nlohmann_json)

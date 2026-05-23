@@ -10,6 +10,7 @@
 #include "csim/core/sim_types.h"
 #include "csim/utilities/work_queue.h"
 #include "csim/utilities/cache.h"
+#include "csim/config/knob_system.h"
 #include "models/transaction_inbox.h"
 #include "models/transaction_queue.h"
 
@@ -17,11 +18,9 @@ namespace csim {
 
 class HomeAgent : public Module {
 public:
-    Port port;
+    HomeAgent(sim_t& sim, System& sys, uint32_t id, std::string name);
 
-    HomeAgent(sim_t& sim, System& sys, uint32_t id, std::string name, uint32_t downstream_target_id,
-              time_ps clock_period_ps);
-
+    auto elaborate() -> void override;
     auto start() -> void override;
 
 private:
@@ -31,17 +30,31 @@ private:
         ~InboxGuard() { ha.inboxes.erase(txn_uid); }
     };
 
-    uint32_t downstream_target_id;
-    time_ps  clock_period_ps;
+    KnobList&  knob_list;
+    Knob<int>& clock_period_ps_knob =
+        knob_list.add_knob<int>("clock_period_ps", "Clock period in picoseconds", 1000);
+    Knob<int>& downstream_target_id_knob =
+        knob_list.add_knob<int>("downstream_target_id", "Target agent ID for transactions", 1);
+    Knob<int>& cache_hit_latency_cycles_knob =
+        knob_list.add_knob<int>("cache_hit_latency_cycles", "Cache hit latency in cycles", 3);
+    Knob<int>& pipeline_latency_cycles_knob =
+        knob_list.add_knob<int>("pipeline_latency_cycles", "Pipeline latency in cycles", 5);
+    Knob<int>& tq_capacity_knob =
+        knob_list.add_knob<int>("tq_capacity", "Number of TQ entries", 16);
 
-    // Outbound channel queues.
-    WorkQueue outbound_req;
-    WorkQueue outbound_dat;
-    WorkQueue outbound_crsp;
+    // Captured at elaborate:
+    time_ps  clock_period_ps;
+    uint32_t downstream_target_id;
+    uint32_t cache_hit_latency_cycles;
+    uint32_t pipeline_latency_cycles;
+
+    // Constructed at elaborate:
+    std::unique_ptr<WorkQueue>        outbound_req;
+    std::unique_ptr<WorkQueue>        outbound_dat;
+    std::unique_ptr<WorkQueue>        outbound_crsp;
+    std::unique_ptr<TransactionQueue> tq;
 
     Cache cache;
-
-    TransactionQueue tq;
 
     // Service coroutines.
     auto service_req_queue() -> proc_t;
@@ -72,10 +85,6 @@ private:
 
     // Generic helpers
     auto should_use_dmt(const Payload& req) -> bool;
-
-    // Defaults — future config will override.
-    uint32_t cache_hit_latency_cycles = 3;
-    uint32_t pipeline_latency_cycles  = 5;
 };
 
 } // namespace csim

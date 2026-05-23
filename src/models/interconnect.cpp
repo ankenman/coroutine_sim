@@ -1,9 +1,7 @@
 #include "models/interconnect.h"
 
 #include <cassert>
-#include <iostream>
-#include <memory>
-#include <utility>
+#include <ranges>
 
 #include "protocols/chi.h"
 
@@ -15,20 +13,17 @@ Interconnect::Interconnect(sim_t& sim, System& sys, uint32_t id, std::string nam
 }
 
 auto
-Interconnect::start() -> void
+Interconnect::elaborate() -> void
 {
-    // No coroutines yet — interconnect is purely synchronous.
+    for (auto& port_ptr : port_map | std::views::values) {
+        port_ptr->on_receive(this, &Interconnect::handle_incoming);
+    }
 }
 
 auto
-Interconnect::attach(Module& m, Port& agent_port) -> void
+Interconnect::start() -> void
 {
-    assert(ports.find(m.id()) == ports.end() && "duplicate node_id on interconnect");
-
-    auto p = std::make_unique<Port>();
-    p->on_receive(this, &Interconnect::handle_incoming);
-    bind(*p, agent_port);
-    ports[m.id()] = std::move(p);
+    // No coroutines — interconnect is purely synchronous.
 }
 
 auto
@@ -56,10 +51,7 @@ Interconnect::handle_incoming(payload_ptr payload) -> void
         assert(false && "unhandled channel in interconnect routing");
     }
 
-    auto it = ports.find(tgt_id);
-    assert(it != ports.end() && "tgt_id not attached to interconnect");
-
-    it->second->send(std::move(payload));
+    get_port(tgt_id).send(std::move(payload));
 }
 
 } // namespace csim
