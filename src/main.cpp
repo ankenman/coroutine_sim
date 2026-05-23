@@ -2,7 +2,7 @@
 #include <iostream>
 #include "csim/core/sim_types.h"
 #include "csim/core/system.h"
-#include "csim/config/topology_loader.h"
+#include "models/topology_loader.h"
 #include "csim/config/knob_system.h"
 
 using namespace csim;

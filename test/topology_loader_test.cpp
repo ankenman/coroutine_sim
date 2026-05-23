@@ -1,4 +1,4 @@
-#include "csim/config/topology_loader.h"
+#include "models/topology_loader.h"
 #include "csim/config/config.h"
 #include "csim/core/system.h"
 

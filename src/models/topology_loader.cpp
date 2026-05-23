@@ -1,4 +1,4 @@
-#include "csim/config/topology_loader.h"
+#include "models/topology_loader.h"
 #include "models/home_agent.h"
 #include "models/initiator.h"
 #include "models/target.h"

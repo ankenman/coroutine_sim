@@ -124,7 +124,7 @@ Initiator::handle_rdat(payload_ptr response) -> void
     auto it = outstanding_txns.find(response->txn_uid);
     assert(it != outstanding_txns.end() && "received response for unknown txn_uid");
 
-    const auto& original_request = it->second.request;     
+    const auto& original_request = it->second.request;
     const auto  latency          = sim.now() - original_request->start_time;
 
     tracer.instant(
