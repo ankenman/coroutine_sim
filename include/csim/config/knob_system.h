@@ -1,7 +1,7 @@
 #pragma once
 
 // Convenience header that includes all knob system components
-#include "config_manager.h"
+#include "config.h"
 #include "knob_base.h"
 #include "knob_list.h"
 
