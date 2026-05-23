@@ -35,8 +35,7 @@ protected:
     }
 
     // Helper: register a knob in module "test_mod".
-    template <typename T>
-    auto add_knob(const std::string& name, const T& default_value) -> Knob<T>&
+    template <typename T> auto add_knob(const std::string& name, const T& default_value) -> Knob<T>&
     {
         auto& kl = config::get_or_create("test_mod");
         return kl.add_knob(name, "test knob", default_value);

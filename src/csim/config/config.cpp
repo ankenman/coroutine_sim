@@ -20,7 +20,8 @@ std::unordered_map<std::string, KnobBase*>                 all_knobs;
 std::vector<std::string>                                   module_order;
 bool                                                       current_strict = true;
 
-auto set_knob_value(const std::string& key, const std::string& value) -> void
+auto
+set_knob_value(const std::string& key, const std::string& value) -> void
 {
     auto it = all_knobs.find(key);
     if (it == all_knobs.end()) {
@@ -38,7 +39,8 @@ auto set_knob_value(const std::string& key, const std::string& value) -> void
 
 } // namespace
 
-auto get_or_create(const std::string& module_name) -> KnobList&
+auto
+get_or_create(const std::string& module_name) -> KnobList&
 {
     std::lock_guard<std::mutex> lock(state_mutex);
 
@@ -49,18 +51,21 @@ auto get_or_create(const std::string& module_name) -> KnobList&
     return *module_knob_lists[module_name];
 }
 
-auto get_or_create(const char* module_name) -> KnobList&
+auto
+get_or_create(const char* module_name) -> KnobList&
 {
     return get_or_create(std::string(module_name));
 }
 
-auto register_knob(const std::string& full_name, KnobBase* knob) -> void
+auto
+register_knob(const std::string& full_name, KnobBase* knob) -> void
 {
     std::lock_guard<std::mutex> lock(state_mutex);
     all_knobs[full_name] = knob;
 }
 
-auto parse_command_line(int argc, char* argv[], bool strict) -> void
+auto
+parse_command_line(int argc, char* argv[], bool strict) -> void
 {
     // Priority: JSON (lowest) -> config file -> command line args (highest)
     //
@@ -117,7 +122,8 @@ auto parse_command_line(int argc, char* argv[], bool strict) -> void
         }
 
         if (arg == "--json" || arg == "--config") {
-            if (i + 1 < argc) ++i;
+            if (i + 1 < argc)
+                ++i;
             continue;
         }
 
@@ -173,7 +179,8 @@ auto parse_command_line(int argc, char* argv[], bool strict) -> void
     current_strict = true;
 }
 
-auto parse_config_file(const std::string& filename) -> void
+auto
+parse_config_file(const std::string& filename) -> void
 {
     std::lock_guard<std::mutex> lock(state_mutex);
 
@@ -196,7 +203,8 @@ auto parse_config_file(const std::string& filename) -> void
         line.erase(0, line.find_first_not_of(" \t\r\n"));
         line.erase(line.find_last_not_of(" \t\r\n") + 1);
 
-        if (line.empty()) continue;
+        if (line.empty())
+            continue;
 
         size_t eq_pos = line.find('=');
         if (eq_pos == std::string::npos) {
@@ -222,7 +230,8 @@ auto parse_config_file(const std::string& filename) -> void
     }
 }
 
-auto parse_json_file(const std::string& filename) -> void
+auto
+parse_json_file(const std::string& filename) -> void
 {
     std::lock_guard<std::mutex> lock(state_mutex);
 
@@ -244,14 +253,13 @@ auto parse_json_file(const std::string& filename) -> void
             for (auto& [knob_name, knob_val] : val.items()) {
                 std::string full_name = key + "." + knob_name;
                 try {
-                    std::string str_val = knob_val.is_string()
-                                              ? knob_val.get<std::string>()
-                                              : knob_val.dump();
+                    std::string str_val =
+                        knob_val.is_string() ? knob_val.get<std::string>() : knob_val.dump();
                     set_knob_value(full_name, str_val);
                 }
                 catch (const std::exception& e) {
-                    std::cerr << "Error in JSON for key '" << full_name
-                              << "': " << e.what() << "\n";
+                    std::cerr << "Error in JSON for key '" << full_name << "': " << e.what()
+                              << "\n";
                 }
             }
         }
@@ -267,7 +275,8 @@ auto parse_json_file(const std::string& filename) -> void
     }
 }
 
-auto write_json_file(const std::string& filename) -> void
+auto
+write_json_file(const std::string& filename) -> void
 {
     std::lock_guard<std::mutex> lock(state_mutex);
 
@@ -275,21 +284,28 @@ auto write_json_file(const std::string& filename) -> void
 
     for (const auto& module_name : module_order) {
         auto it = module_knob_lists.find(module_name);
-        if (it == module_knob_lists.end()) continue;
+        if (it == module_knob_lists.end())
+            continue;
 
         nlohmann::json module_json;
         for (const auto& knob_name : it->second->get_knob_names()) {
             KnobBase* knob = it->second->get_knob(knob_name);
-            if (!knob) continue;
+            if (!knob)
+                continue;
 
             std::string type = knob->type_name();
             std::string str  = knob->to_string();
 
-            if (type == "int")         module_json[knob_name] = std::stoi(str);
-            else if (type == "double") module_json[knob_name] = std::stod(str);
-            else if (type == "float")  module_json[knob_name] = std::stof(str);
-            else if (type == "bool")   module_json[knob_name] = (str == "1" || str == "true");
-            else                       module_json[knob_name] = str;
+            if (type == "int")
+                module_json[knob_name] = std::stoi(str);
+            else if (type == "double")
+                module_json[knob_name] = std::stod(str);
+            else if (type == "float")
+                module_json[knob_name] = std::stof(str);
+            else if (type == "bool")
+                module_json[knob_name] = (str == "1" || str == "true");
+            else
+                module_json[knob_name] = str;
         }
         j[module_name] = module_json;
     }
@@ -301,7 +317,8 @@ auto write_json_file(const std::string& filename) -> void
     file << j.dump(4) << "\n";
 }
 
-auto write_config_file(const std::string& filename, bool verbose) -> void
+auto
+write_config_file(const std::string& filename, bool verbose) -> void
 {
     std::lock_guard<std::mutex> lock(state_mutex);
 
@@ -315,14 +332,16 @@ auto write_config_file(const std::string& filename, bool verbose) -> void
 
     for (const auto& module_name : module_order) {
         auto it = module_knob_lists.find(module_name);
-        if (it == module_knob_lists.end()) continue;
+        if (it == module_knob_lists.end())
+            continue;
 
         file << "# Module: " << module_name << "\n";
         file << "# " << std::string(70, '-') << "\n";
 
         for (const auto& knob_name : it->second->get_knob_names()) {
             KnobBase* knob = it->second->get_knob(knob_name);
-            if (!knob) continue;
+            if (!knob)
+                continue;
 
             std::string full_name = module_name + "." + knob_name;
             if (verbose) {
@@ -330,12 +349,14 @@ auto write_config_file(const std::string& filename, bool verbose) -> void
                 file << "# Type: " << knob->type_name() << "\n";
             }
             file << full_name << " = " << knob->to_string() << "\n";
-            if (verbose) file << "\n";
+            if (verbose)
+                file << "\n";
         }
     }
 }
 
-auto print_help() -> void
+auto
+print_help() -> void
 {
     std::lock_guard<std::mutex> lock(state_mutex);
 
@@ -348,14 +369,16 @@ auto print_help() -> void
 
     for (const auto& module_name : module_order) {
         auto it = module_knob_lists.find(module_name);
-        if (it == module_knob_lists.end()) continue;
+        if (it == module_knob_lists.end())
+            continue;
 
         std::cout << "Module: " << module_name << "\n";
         std::cout << std::string(70, '-') << "\n";
 
         for (const auto& knob_name : it->second->get_knob_names()) {
             KnobBase* knob = it->second->get_knob(knob_name);
-            if (!knob) continue;
+            if (!knob)
+                continue;
 
             std::string full_name = module_name + "." + knob_name;
             std::cout << "  --" << std::left << std::setw(max_name_len + 2) << full_name;
@@ -376,7 +399,8 @@ auto print_help() -> void
     std::cout << "  Save current config as JSON with --dump-json filename\n";
 }
 
-auto check_for_help(int argc, char* argv[]) -> void
+auto
+check_for_help(int argc, char* argv[]) -> void
 {
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
@@ -387,14 +411,16 @@ auto check_for_help(int argc, char* argv[]) -> void
     }
 }
 
-auto get_knob(const std::string& full_name) -> KnobBase*
+auto
+get_knob(const std::string& full_name) -> KnobBase*
 {
     std::lock_guard<std::mutex> lock(state_mutex);
-    auto it = all_knobs.find(full_name);
+    auto                        it = all_knobs.find(full_name);
     return (it != all_knobs.end()) ? it->second : nullptr;
 }
 
-auto reset_all() -> void
+auto
+reset_all() -> void
 {
     std::lock_guard<std::mutex> lock(state_mutex);
     for (auto& [name, knob_list] : module_knob_lists) {
@@ -402,7 +428,8 @@ auto reset_all() -> void
     }
 }
 
-auto clear() -> void
+auto
+clear() -> void
 {
     std::lock_guard<std::mutex> lock(state_mutex);
     all_knobs.clear();
@@ -410,12 +437,14 @@ auto clear() -> void
     module_order.clear();
 }
 
-auto remove_module(const std::string& module_name) -> void
+auto
+remove_module(const std::string& module_name) -> void
 {
     std::lock_guard<std::mutex> lock(state_mutex);
 
     auto module_it = module_knob_lists.find(module_name);
-    if (module_it == module_knob_lists.end()) return;
+    if (module_it == module_knob_lists.end())
+        return;
 
     for (const auto& knob_name : module_it->second->get_knob_names()) {
         all_knobs.erase(module_name + "." + knob_name);
