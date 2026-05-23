@@ -11,16 +11,15 @@
 #include "csim/core/port.h"
 #include "csim/core/sim_types.h"
 #include "protocols/chi.h"
+#include "csim/config/knob_system.h"
 
 namespace csim {
 
 class Initiator : public Module {
 public:
-    Port port;
+    Initiator(sim_t& sim, System& sys, uint32_t id, std::string name);
 
-    Initiator(sim_t& sim, System& sys, uint32_t id, std::string name, uint32_t home_id,
-              time_ps clock_period_ps);
-
+    auto elaborate() -> void override;
     auto start() -> void override;
 
 private:
@@ -32,8 +31,15 @@ private:
     auto handle_crsp(payload_ptr response) -> void;
     auto get_next_txn_id() -> uint32_t { return next_txn_id++; }
 
+    KnobList&  knob_list;
+    Knob<int>& clock_period_ps_knob =
+        knob_list.add_knob<int>("clock_period_ps", "Clock period in picoseconds", 1000);
+    Knob<int>& home_id_knob =
+        knob_list.add_knob<int>("home_id", "Home agent ID for transactions", 1);
+
     time_ps  clock_period_ps;
     uint32_t home_id;
+
     uint32_t next_txn_id = 0;
 
     DelayChannel outbound_req;

@@ -6,19 +6,31 @@
 
 #include "protocols/chi.h"
 
+#include <ranges>
+
 namespace csim {
 
-HomeAgent::HomeAgent(sim_t& sim, System& sys, uint32_t id, std::string name,
-                     uint32_t downstream_target_id, time_ps clock_period_ps)
-    : Module(sim, sys, id, std::move(name)),
-      downstream_target_id(downstream_target_id),
-      clock_period_ps(clock_period_ps),
-      outbound_req(sim, clock_period_ps),
-      outbound_dat(sim, clock_period_ps),
-      outbound_crsp(sim, clock_period_ps),
-      tq(sim, 8)
+HomeAgent::HomeAgent(sim_t& sim, System& sys, uint32_t id, std::string name)
+    : Module(sim, sys, id, std::move(name)), knob_list(config::get_or_create(this->name))
 {
-    port.on_receive(this, &HomeAgent::handle_incoming);
+}
+
+auto
+HomeAgent::elaborate() -> void
+{
+    clock_period_ps          = static_cast<time_ps>(clock_period_ps_knob.get());
+    downstream_target_id     = static_cast<uint32_t>(downstream_target_id_knob.get());
+    cache_hit_latency_cycles = static_cast<uint32_t>(cache_hit_latency_cycles_knob.get());
+    pipeline_latency_cycles  = static_cast<uint32_t>(pipeline_latency_cycles_knob.get());
+
+    outbound_req  = std::make_unique<WorkQueue>(sim, clock_period_ps);
+    outbound_dat  = std::make_unique<WorkQueue>(sim, clock_period_ps);
+    outbound_crsp = std::make_unique<WorkQueue>(sim, clock_period_ps);
+    tq            = std::make_unique<TransactionQueue>(sim, tq_capacity_knob.get());
+
+    for (auto& port_ptr : port_map | std::views::values) {
+        port_ptr->on_receive(this, &HomeAgent::handle_incoming);
+    }
 }
 
 auto
@@ -63,7 +75,7 @@ HomeAgent::handle_read_transaction(payload_ptr req) -> proc_t
     const auto&  chi_in  = req->require_as<chi::chi_fields>();
     const addr_t address = chi_in.address;
 
-    TQEntry tq_entry{tq, req};
+    TQEntry tq_entry{*tq, req};
     tracer.instant(name, "tq waiting for grant", req->txn_uid, req->flit_id, address);
     co_await tq_entry.wait_for_grant();
     tracer.instant(name, "tq_granted - entering pipeline", req->txn_uid, req->flit_id, address);
@@ -112,7 +124,7 @@ HomeAgent::read_miss_non_dmt(payload_ptr req) -> proc_t
     // Forward REQ to target.
     auto          forward_req = create_req(*req, chi::ReqOpcode::ReadNoSnp, downstream_target_id);
     const time_ps fwd_offset  = static_cast<time_ps>(pipeline_latency_cycles) * clock_period_ps;
-    outbound_req.push(fwd_offset, std::move(forward_req));
+    outbound_req->push(fwd_offset, std::move(forward_req));
 
     // Wait for RDAT from target.
     inbox.expect_data_chunks(1);
@@ -131,7 +143,7 @@ HomeAgent::read_miss_non_dmt(payload_ptr req) -> proc_t
     // Build and queue CompData to requester.
     auto          data_return = create_dat(*req, chi::DatOpcode::CompData, chi_in.req.src_id);
     const time_ps dat_offset  = static_cast<time_ps>(pipeline_latency_cycles) * clock_period_ps;
-    outbound_dat.push(dat_offset, std::move(data_return));
+    outbound_dat->push(dat_offset, std::move(data_return));
 }
 
 auto
@@ -144,7 +156,7 @@ HomeAgent::read_miss_dmt(payload_ptr req) -> proc_t
     // For now, this is the same as non-DMT forward.
     auto          forward_req = create_req(*req, chi::ReqOpcode::ReadNoSnp, downstream_target_id);
     const time_ps fwd_offset  = static_cast<time_ps>(pipeline_latency_cycles) * clock_period_ps;
-    outbound_req.push(fwd_offset, std::move(forward_req));
+    outbound_req->push(fwd_offset, std::move(forward_req));
 
     // Wait for Comp from target (no data — data went directly to requester).
     // TODO: distinguish Comp vs CompData. For now, target sends CompData; assume it.
@@ -168,7 +180,7 @@ HomeAgent::read_hit(payload_ptr req) -> proc_t
 
     auto          data_return = create_dat(*req, chi::DatOpcode::CompData, chi_in.req.src_id);
     const time_ps dat_offset  = static_cast<time_ps>(cache_hit_latency_cycles) * clock_period_ps;
-    outbound_dat.push(dat_offset, std::move(data_return));
+    outbound_dat->push(dat_offset, std::move(data_return));
 
     co_return;
 }
@@ -179,7 +191,7 @@ HomeAgent::handle_write_transaction(payload_ptr req) -> proc_t
     const auto& chi_in  = req->require_as<chi::chi_fields>();
     const auto  address = chi_in.address;
 
-    TQEntry tq_entry{tq, req};
+    TQEntry tq_entry{*tq, req};
     tracer.instant(name, "tq_acquired", req->txn_uid, req->flit_id, address);
     co_await tq_entry.wait_for_grant();
     tracer.instant(name, "tq_granted", req->txn_uid, req->flit_id, address);
@@ -195,7 +207,7 @@ HomeAgent::handle_write_transaction(payload_ptr req) -> proc_t
 
     auto comp_dbid       = create_rsp(*req, chi::RspOpcode::CompDBIDResp, chi_in.req.src_id, dbid);
     const time_ps offset = static_cast<time_ps>(pipeline_latency_cycles) * clock_period_ps;
-    outbound_crsp.push(offset, std::move(comp_dbid));
+    outbound_crsp->push(offset, std::move(comp_dbid));
 
     inbox.expect_data_chunks(1);
     co_await inbox.all_data_chunks_received();
@@ -218,15 +230,15 @@ auto
 HomeAgent::service_req_queue() -> proc_t
 {
     while (true) {
-        co_await outbound_req.wait();
-        auto payload = outbound_req.pop();
+        co_await outbound_req->wait();
+        auto payload = outbound_req->pop();
 
         const auto& chi = payload->require_as<chi::chi_fields>();
         tracer.instant(name, "sending_req", payload->txn_uid, payload->flit_id, chi.address,
                        {{"opcode", std::string(name_of(chi.req.opcode))},
                         {"tgt_id", std::to_string(chi.req.tgt_id)}});
 
-        port.send(std::move(payload));
+        single_port().send(std::move(payload));
     }
 }
 
@@ -234,23 +246,23 @@ auto
 HomeAgent::service_dat_queue() -> proc_t
 {
     while (true) {
-        co_await outbound_dat.wait();
-        auto payload = outbound_dat.pop();
+        co_await outbound_dat->wait();
+        auto payload = outbound_dat->pop();
 
         const auto& chi = payload->require_as<chi::chi_fields>();
         tracer.instant(name, "sending_rdat", payload->txn_uid, payload->flit_id, chi.address,
                        {{"opcode", std::string(name_of(chi.dat.opcode))},
                         {"tgt_id", std::to_string(chi.dat.tgt_id)}});
 
-        port.send(std::move(payload));
+        single_port().send(std::move(payload));
     }
 }
 auto
 HomeAgent::service_crsp_queue() -> proc_t
 {
     while (true) {
-        co_await outbound_crsp.wait();
-        auto payload = outbound_crsp.pop();
+        co_await outbound_crsp->wait();
+        auto payload = outbound_crsp->pop();
 
         const auto& chi = payload->require_as<chi::chi_fields>();
         tracer.instant(name, "sending_crsp", payload->txn_uid, payload->flit_id, chi.address,
@@ -258,7 +270,7 @@ HomeAgent::service_crsp_queue() -> proc_t
                         {"tgt_id", std::to_string(chi.rsp.tgt_id)},
                         {"dbid", std::to_string(chi.rsp.dbid)}});
 
-        port.send(std::move(payload));
+        single_port().send(std::move(payload));
     }
 }
 

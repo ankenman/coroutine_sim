@@ -25,6 +25,7 @@ auto write_json_file(const std::string& filename) -> void;
 auto print_help() -> void;
 auto check_for_help(int argc, char* argv[]) -> void;
 auto get_knob(const std::string& full_name) -> KnobBase*;
+auto get_topology_file() -> std::string;
 
 // Lifecycle
 auto reset_all() -> void;

@@ -1,43 +1,43 @@
 #include "csim/core/port.h"
 #include <iostream>
-#include <deque>
-#include <string>
 #include "csim/core/sim_types.h"
 #include "csim/core/system.h"
-
-#include "models/initiator.h"
-#include "models/target.h"
-#include "models/interconnect.h"
-#include "models/home_agent.h"
+#include "models/topology_loader.h"
+#include "csim/config/knob_system.h"
 
 using namespace csim;
 
 auto
-main() -> int
+main(int argc, char* argv[]) -> int
 {
-    sim_t        sim;
-    csim::System sys{sim};
+    sim_t  sim;
+    System sys{sim};
 
-    tracing::Tracer::instance().open("trace.jsonl", "trace.txt", sim);
-    tracing::Tracer::instance().enable();
+    // Phase 1: get the topology file from CLI (and any non-strict knob parsing).
+    config::parse_command_line(argc, argv, /*strict=*/false);
 
-    constexpr time_ps clock_period_ps = 1000;
+    // Phase 2: load topology, which constructs modules and applies their config.
+    TopologyLoader    loader(sim, sys);
+    const std::string topo_file = config::get_topology_file();
+    if (topo_file.empty()) {
+        std::cerr << "Error: --topology <file> is required\n";
+        return 1;
+    }
+    loader.load(topo_file);
 
-    Interconnect ic(sim, sys, /*id=*/2, "interconnect");
-    Initiator    i(sim, sys, /*id=*/0, "initiator", /*target_id=*/3, clock_period_ps);
-    HomeAgent    ha(sim, sys, /*id=*/3, "ha", /*downstream_target_id=*/1, clock_period_ps);
-    Target       t(sim, sys, /*id=*/1, "target", clock_period_ps);
+    // Phase 3: now all knobs are registered. Re-parse strictly, plus help.
+    csim::config::check_for_help(argc, argv);
+    csim::config::parse_command_line(argc, argv, /*strict=*/true);
+
+    auto& tracer = tracing::Tracer::instance();
+    tracer.open("trace.jsonl", "trace.txt", sim);
+    tracer.enable();
 
     sys.elaborate_all();
 
-    ic.attach(i, i.port);
-    ic.attach(ha, ha.port);
-    ic.attach(t, t.port);
-
     sys.start_all();
     sim.run_until(10'000_ns);
-
-    tracing::Tracer::instance().close();
+    tracer.close();
 
     return 0;
 }

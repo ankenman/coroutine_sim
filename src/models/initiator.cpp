@@ -3,18 +3,17 @@
 #include <memory>
 #include <utility>
 #include <cassert>
+#include <iostream>
+#include <ranges>
 
 namespace csim {
-Initiator::Initiator(sim_t& sim, System& sys, uint32_t id, std::string name, uint32_t home_id,
-                     time_ps clock_period_ps)
+Initiator::Initiator(sim_t& sim, System& sys, uint32_t id, std::string name)
     : Module(sim, sys, id, std::move(name)),
-      clock_period_ps(clock_period_ps),
-      home_id(home_id),
+      knob_list(csim::config::get_or_create(this->name)),
       outbound_req(sim),
       outbound_wdat(sim),
       outbound_srsp(sim)
 {
-    port.on_receive(this, &Initiator::handle_incoming);
 }
 
 auto
@@ -50,6 +49,17 @@ Initiator::workload() -> proc_t
     issue_req(0x2000ull, chi::ReqOpcode::ReadShared);
 }
 auto
+Initiator::elaborate() -> void
+{
+    clock_period_ps = static_cast<time_ps>(clock_period_ps_knob.get());
+    home_id         = static_cast<uint32_t>(home_id_knob.get());
+
+    for (auto& port_ptr : port_map | std::views::values) {
+        port_ptr->on_receive(this, &Initiator::handle_incoming);
+    }
+}
+
+auto
 Initiator::start() -> void
 {
     tick_clock();
@@ -68,7 +78,7 @@ Initiator::tick_clock() -> proc_t
             const auto& chi     = payload->require_as<chi::chi_fields>();
             tracer.instant(name, "sending_req", payload->txn_uid, payload->flit_id, chi.address,
                            {{"opcode", std::string(name_of(chi.req.opcode))}});
-            port.send(std::move(payload));
+            single_port().send(std::move(payload));
         }
         if (outbound_wdat.has_ready_payload()) {
             auto        payload = outbound_wdat.pop();
@@ -77,7 +87,7 @@ Initiator::tick_clock() -> proc_t
                            {{"opcode", std::string(name_of(chi.dat.opcode))},
                             {"dbid", std::to_string(chi.dat.dbid)}});
             outstanding_txns.erase(payload->txn_uid);
-            port.send(std::move(payload));
+            single_port().send(std::move(payload));
         }
         if (outbound_srsp.has_ready_payload()) {
             auto        payload = outbound_srsp.pop();
@@ -85,7 +95,7 @@ Initiator::tick_clock() -> proc_t
             tracer.instant(name, "sending_srsp", payload->txn_uid, payload->flit_id, chi.address,
                            {{"opcode", std::string(name_of(chi.rsp.opcode))}});
             outstanding_txns.erase(payload->txn_uid);
-            port.send(std::move(payload));
+            single_port().send(std::move(payload));
         }
         co_await sim.timeout(clock_period_ps);
     }
@@ -114,7 +124,7 @@ Initiator::handle_rdat(payload_ptr response) -> void
     auto it = outstanding_txns.find(response->txn_uid);
     assert(it != outstanding_txns.end() && "received response for unknown txn_uid");
 
-    const auto& original_request = it->second.request; // .request, was bare payload_ptr
+    const auto& original_request = it->second.request;
     const auto  latency          = sim.now() - original_request->start_time;
 
     tracer.instant(

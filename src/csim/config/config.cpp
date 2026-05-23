@@ -16,6 +16,7 @@ std::unordered_map<std::string, std::unique_ptr<KnobList>> module_knob_lists;
 std::unordered_map<std::string, KnobBase*>                 all_knobs;
 std::vector<std::string>                                   module_order;
 bool                                                       current_strict = true;
+std::string                                                topology_file;
 
 auto
 set_knob_value(const std::string& key, const std::string& value) -> void
@@ -65,6 +66,19 @@ parse_command_line(int argc, char* argv[], bool strict) -> void
 
     current_strict = strict;
 
+    // Find topology file
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+        if (arg == "--topology") {
+            if (i + 1 < argc) {
+                topology_file = argv[++i];
+            }
+            else {
+                std::cerr << "Error: --topology requires a filename\n";
+            }
+        }
+    }
+
     // Load JSON file first (lowest priority)
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
@@ -109,7 +123,7 @@ parse_command_line(int argc, char* argv[], bool strict) -> void
             continue;
         }
 
-        if (arg == "--json" || arg == "--config") {
+        if (arg == "--json" || arg == "--config" || arg == "--topology") {
             if (i + 1 < argc)
                 ++i;
             continue;
@@ -393,6 +407,12 @@ get_knob(const std::string& full_name) -> KnobBase*
 }
 
 auto
+get_topology_file() -> std::string
+{
+    return topology_file;
+}
+
+auto
 reset_all() -> void
 {
     for (auto& [name, knob_list] : module_knob_lists) {
@@ -406,6 +426,7 @@ clear() -> void
     all_knobs.clear();
     module_knob_lists.clear();
     module_order.clear();
+    topology_file.clear();
 }
 
 auto

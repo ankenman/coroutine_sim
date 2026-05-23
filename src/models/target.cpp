@@ -1,16 +1,27 @@
 #include "models/target.h"
 
 #include <memory>
+#include <ranges>
 #include <utility>
 
 namespace csim {
 
-Target::Target(sim_t& sim, System& sys, uint32_t id, std::string name, time_ps clock_period_ps)
-    : Module(sim, sys, id, std::move(name)),
-      clock_period_ps(clock_period_ps),
-      outbound_data(sim, clock_period_ps)
+Target::Target(sim_t& sim, System& sys, uint32_t id, std::string name)
+    : Module(sim, sys, id, std::move(name)), knob_list(config::get_or_create(this->name))
 {
-    port.on_receive(this, &Target::handle_request);
+}
+
+auto
+Target::elaborate() -> void
+{
+    clock_period_ps     = static_cast<time_ps>(clock_period_ps_knob.get());
+    data_latency_cycles = static_cast<uint32_t>(data_latency_cycles_knob.get());
+
+    outbound_data = std::make_unique<WorkQueue>(sim, clock_period_ps);
+
+    for (auto& port_ptr : port_map | std::views::values) {
+        port_ptr->on_receive(this, &Target::handle_request);
+    }
 }
 
 auto
@@ -32,22 +43,22 @@ Target::handle_request(payload_ptr payload) -> void
 
     const time_ps offset_ps = static_cast<time_ps>(data_latency_cycles) * clock_period_ps;
 
-    outbound_data.push(offset_ps, std::move(response));
+    outbound_data->push(offset_ps, std::move(response));
 }
 
 auto
 Target::service_data_queue() -> proc_t
 {
     while (true) {
-        co_await outbound_data.wait();
-        auto payload = outbound_data.pop();
+        co_await outbound_data->wait();
+        auto payload = outbound_data->pop();
 
         const auto& chi_pl = payload->require_as<chi::chi_fields>();
         tracer.instant(name, "sending_rdat", payload->txn_uid, payload->flit_id, chi_pl.address,
                        {{"opcode", std::string(name_of(chi_pl.dat.opcode))},
                         {"txn_id", std::to_string(chi_pl.txn_id)}});
 
-        port.send(std::move(payload));
+        single_port().send(std::move(payload));
     }
 }
 

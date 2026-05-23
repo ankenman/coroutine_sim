@@ -5,6 +5,7 @@ set(tests
         transaction_inbox_test.cpp
         transaction_queue_test.cpp
         config_test.cpp
+        topology_loader_test.cpp
 )
 
 foreach(test ${tests})

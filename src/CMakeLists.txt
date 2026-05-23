@@ -21,6 +21,7 @@ add_library(csim_models STATIC
         models/home_agent.cpp
         models/transaction_inbox.cpp
         models/transaction_queue.cpp
+        models/topology_loader.cpp
 )
 target_link_libraries(csim_models PUBLIC csim_infra)
 target_include_directories(csim_models PUBLIC ../include)
