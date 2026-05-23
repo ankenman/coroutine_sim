@@ -12,14 +12,11 @@ namespace csim::test {
 
 class TopologyLoaderTest : public ::testing::Test {
 public:
-    sim_t  sim;
-    System sys{sim};
+    sim_t                 sim;
+    System                sys{sim};
     std::filesystem::path test_file = "test_topology.json";
 
-    void SetUp() override
-    {
-        csim::config::clear();
-    }
+    void SetUp() override { csim::config::clear(); }
 
     void TearDown() override
     {
