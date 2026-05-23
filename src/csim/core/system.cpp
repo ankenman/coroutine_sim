@@ -12,6 +12,14 @@ System::register_module(Module* m) -> void
 }
 
 auto
+System::elaborate_all() -> void
+{
+    for (auto* module : modules) {
+        module->elaborate();
+    }
+}
+
+auto
 System::start_all() -> void
 {
     for (auto* m : modules)

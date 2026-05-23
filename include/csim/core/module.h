@@ -15,6 +15,11 @@ public:
     Module(sim_t& sim, System& sys, uint32_t id, std::string name);
     virtual ~Module() = default;
 
+    // Called after all modules are constructed and config is finalized.
+    // Modules override this to build internal state that depends on knob values.
+    // Default: no-op.
+    virtual auto elaborate() -> void {}
+
     virtual auto start() -> void {}
 
     [[nodiscard]] auto id() const -> uint32_t { return stored_id; }
