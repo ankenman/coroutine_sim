@@ -26,13 +26,14 @@ private:
     std::unordered_map<std::string, std::unique_ptr<Module>> modules;
 
     auto construct_module(const nlohmann::json& spec) -> void;
-    auto construct_initiator(const nlohmann::json& spec) -> std::unique_ptr<Module>;
-    auto construct_home_agent(const nlohmann::json& spec) -> std::unique_ptr<Module>;
-    auto construct_target(const nlohmann::json& spec) -> std::unique_ptr<Module>;
-    auto construct_interconnect(const nlohmann::json& spec) -> std::unique_ptr<Module>;
-    auto apply_module_config(const std::string& name, const nlohmann::json& config) -> void;
-    auto wire_neighbors(const nlohmann::json&                          spec,
-                        std::set<std::pair<std::string, std::string>>& seen) -> void;
+    auto construct_initiator(const nlohmann::json& spec) const -> std::unique_ptr<Module>;
+    auto construct_home_agent(const nlohmann::json& spec) const -> std::unique_ptr<Module>;
+    auto construct_target(const nlohmann::json& spec) const -> std::unique_ptr<Module>;
+    auto construct_interconnect(const nlohmann::json& spec) const -> std::unique_ptr<Module>;
+
+    static auto apply_module_config(const std::string& name, const nlohmann::json& config) -> void;
+    auto        wire_neighbors(const nlohmann::json&                          spec,
+                               std::set<std::pair<std::string, std::string>>& seen) -> void;
 };
 
 } // namespace csim
