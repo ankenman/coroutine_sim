@@ -57,7 +57,7 @@ TopologyLoader::construct_module(const nlohmann::json& spec) -> void
     const std::string name = spec["name"];
     const std::string type = spec["type"];
 
-    if (modules.find(name) != modules.end()) {
+    if (modules.contains(name)) {
         throw std::runtime_error("Duplicate module name: " + name);
     }
 
@@ -86,7 +86,7 @@ TopologyLoader::construct_module(const nlohmann::json& spec) -> void
 }
 
 auto
-TopologyLoader::construct_initiator(const nlohmann::json& spec) -> std::unique_ptr<Module>
+TopologyLoader::construct_initiator(const nlohmann::json& spec) const -> std::unique_ptr<Module>
 {
     const std::string name = spec["name"];
     const uint32_t    id   = spec["id"];
@@ -95,7 +95,7 @@ TopologyLoader::construct_initiator(const nlohmann::json& spec) -> std::unique_p
 }
 
 auto
-TopologyLoader::construct_home_agent(const nlohmann::json& spec) -> std::unique_ptr<Module>
+TopologyLoader::construct_home_agent(const nlohmann::json& spec) const -> std::unique_ptr<Module>
 {
     const std::string name = spec["name"];
     const uint32_t    id   = spec["id"];
@@ -103,7 +103,7 @@ TopologyLoader::construct_home_agent(const nlohmann::json& spec) -> std::unique_
     return std::make_unique<HomeAgent>(sim, sys, id, name);
 }
 auto
-TopologyLoader::construct_target(const nlohmann::json& spec) -> std::unique_ptr<Module>
+TopologyLoader::construct_target(const nlohmann::json& spec) const -> std::unique_ptr<Module>
 {
     const std::string name = spec["name"];
     const uint32_t    id   = spec["id"];
@@ -111,7 +111,7 @@ TopologyLoader::construct_target(const nlohmann::json& spec) -> std::unique_ptr<
     return std::make_unique<Target>(sim, sys, id, name);
 }
 auto
-TopologyLoader::construct_interconnect(const nlohmann::json& spec) -> std::unique_ptr<Module>
+TopologyLoader::construct_interconnect(const nlohmann::json& spec) const -> std::unique_ptr<Module>
 {
     const std::string name = spec["name"];
     const uint32_t    id   = spec["id"];
