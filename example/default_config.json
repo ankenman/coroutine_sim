@@ -1,0 +1,20 @@
+{
+    "global": {
+        "output_dir": "output"
+    },
+    "ha0": {
+        "cache_hit_latency_cycles": 3,
+        "clock_period_ps": 1000,
+        "downstream_target_id": 2,
+        "pipeline_latency_cycles": 5,
+        "tq_capacity": 8
+    },
+    "init0": {
+        "clock_period_ps": 1000,
+        "home_id": 1
+    },
+    "tgt0": {
+        "clock_period_ps": 1000,
+        "data_latency_cycles": 50
+    }
+}
