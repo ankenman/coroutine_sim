@@ -5,7 +5,6 @@
 #include <iomanip>
 #include <iostream>
 #include <memory>
-#include <mutex>
 #include <nlohmann/json.hpp>
 #include <unordered_map>
 #include <vector>
@@ -19,20 +18,36 @@ bool                                                       current_strict = true
 std::string                                                topology_file;
 
 auto
-set_knob_value(const std::string& key, const std::string& value) -> void
+find_knob_or_error(const std::string& key) -> KnobBase*
 {
     auto it = all_knobs.find(key);
-    if (it == all_knobs.end()) {
-        if (current_strict) {
-            std::string error_msg = "Unknown knob: " + key;
-            if (key.find('.') == std::string::npos) {
-                error_msg += "\nDid you mean to specify a knob? Use --module." + key + " value";
-            }
-            throw std::runtime_error(error_msg);
-        }
-        return;
+    if (it != all_knobs.end()) {
+        return it->second;
     }
-    it->second->set_from_string(value);
+    if (current_strict) {
+        std::string error_msg = "Unknown knob: " + key;
+        if (key.find('.') == std::string::npos) {
+            error_msg += "\nDid you mean to specify a knob? Use --module." + key + " value";
+        }
+        throw std::runtime_error(error_msg);
+    }
+    return nullptr;
+}
+
+auto
+set_knob_value(const std::string& key, const std::string& value) -> void
+{
+    if (auto* knob = find_knob_or_error(key)) {
+        knob->set_from_string(value);
+    }
+}
+
+auto
+set_knob_json(const std::string& key, const nlohmann::json& value) -> void
+{
+    if (auto* knob = find_knob_or_error(key)) {
+        knob->from_json(value);
+    }
 }
 
 } // namespace
@@ -129,30 +144,7 @@ parse_command_line(int argc, char* argv[], bool strict) -> void
             continue;
         }
 
-        if (arg == "--dump-config") {
-            if (i + 1 < argc) {
-                // write_config_file locks internally; release ours briefly.
-                write_config_file(argv[++i]);
-                std::cout << "Configuration written to " << argv[i] << "\n";
-            }
-            else {
-                std::cerr << "Error: --dump-config requires a filename\n";
-            }
-            continue;
-        }
-
-        if (arg == "--dump-json") {
-            if (i + 1 < argc) {
-                write_json_file(argv[++i]);
-                std::cout << "JSON configuration written to " << argv[i] << "\n";
-            }
-            else {
-                std::cerr << "Error: --dump-json requires a filename\n";
-            }
-            continue;
-        }
-
-        if (arg.substr(0, 2) == "--") {
+        if (arg.starts_with("--")) {
             std::string key = arg.substr(2);
 
             if (i + 1 < argc && argv[i + 1][0] != '-') {
@@ -247,9 +239,7 @@ parse_json_file(const std::string& filename) -> void
             for (auto& [knob_name, knob_val] : val.items()) {
                 std::string full_name = key + "." + knob_name;
                 try {
-                    std::string str_val =
-                        knob_val.is_string() ? knob_val.get<std::string>() : knob_val.dump();
-                    set_knob_value(full_name, str_val);
+                    set_knob_json(full_name, knob_val);
                 }
                 catch (const std::exception& e) {
                     std::cerr << "Error in JSON for key '" << full_name << "': " << e.what()
@@ -259,8 +249,7 @@ parse_json_file(const std::string& filename) -> void
         }
         else {
             try {
-                std::string str_val = val.is_string() ? val.get<std::string>() : val.dump();
-                set_knob_value(key, str_val);
+                set_knob_json(key, val);
             }
             catch (const std::exception& e) {
                 std::cerr << "Error in JSON for key '" << key << "': " << e.what() << "\n";
@@ -285,19 +274,7 @@ write_json_file(const std::string& filename) -> void
             if (!knob)
                 continue;
 
-            std::string type = knob->type_name();
-            std::string str  = knob->to_string();
-
-            if (type == "int")
-                module_json[knob_name] = std::stoi(str);
-            else if (type == "double")
-                module_json[knob_name] = std::stod(str);
-            else if (type == "float")
-                module_json[knob_name] = std::stof(str);
-            else if (type == "bool")
-                module_json[knob_name] = (str == "1" || str == "true");
-            else
-                module_json[knob_name] = str;
+            module_json[knob_name] = knob->to_json();
         }
         j[module_name] = module_json;
     }
@@ -383,8 +360,6 @@ print_help() -> void
     std::cout << "  Load JSON file with --json filename (lowest priority)\n";
     std::cout << "  Load config file with --config filename (overrides JSON)\n";
     std::cout << "  Command line arguments override both JSON and config file\n";
-    std::cout << "  Save current config with --dump-config filename\n";
-    std::cout << "  Save current config as JSON with --dump-json filename\n";
 }
 
 auto

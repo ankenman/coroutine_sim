@@ -12,7 +12,7 @@
 class MyModule {
 public:
     MyModule(const std::string& instance_name)
-        : knob_list(ConfigManager::instance().get_or_create(instance_name)),
+        : knob_list(csim::config::get_or_create(instance_name)),
           clock_period(knob_list.add_knob("clock_period", "Clock period in ns", 1.0)),
           buffer_size(knob_list.add_knob("buffer_size", "Size of internal buffer", 1024)),
           enable_debug(knob_list.add_knob("enable_debug", "Enable debug output", false)),
@@ -40,7 +40,7 @@ private:
 class MyModuleAlt {
 public:
     MyModuleAlt(const std::string& instance_name)
-        : knob_list(ConfigManager::instance().get_or_create(instance_name)) {
+        : knob_list(csim::config::get_or_create(instance_name)) {
         // Initialize knobs in constructor body
         clock_period = &knob_list.add_knob("clock_period", "Clock period in ns", 1.0);
         buffer_size = &knob_list.add_knob("buffer_size", "Size of internal buffer", 1024);
@@ -74,7 +74,7 @@ int main(int argc, char* argv[]) {
     // Example: ./program --config config.txt --module1.clock_period 3.0
     //   - Loads all values from config.txt
     //   - Then overrides module1.clock_period to 3.0
-    ConfigManager::instance().parse_command_line(argc, argv);
+    csim::config::parse_command_line(argc, argv);
 
     // Run modules with their configured values
     module1.run();

@@ -4,7 +4,8 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
-#include <typeinfo>
+#include <type_traits>
+#include <nlohmann/json.hpp>
 
 namespace csim {
 class KnobBase {
@@ -22,6 +23,10 @@ public:
     virtual auto set_from_string(const std::string& value) -> void = 0;
 
     virtual auto to_string() const -> std::string = 0;
+
+    virtual auto to_json() const -> nlohmann::json = 0;
+
+    virtual auto from_json(const nlohmann::json& j) -> void = 0;
 
     virtual auto type_name() const -> std::string = 0;
 
@@ -41,7 +46,7 @@ public:
     }
 
     // Conversion operator for easy access
-    operator T() const { return value; }
+    explicit operator T() const { return value; }
 
     // Assignment operator
     auto operator=(const T& val) -> Knob&
@@ -75,19 +80,24 @@ public:
         return oss.str();
     }
 
+    auto to_json() const -> nlohmann::json override { return value; }
+
+    auto from_json(const nlohmann::json& j) -> void override { value = j.get<T>(); }
+
     auto type_name() const -> std::string override
     {
-        if (typeid(T) == typeid(int))
+        if constexpr (std::is_same_v<T, int>)
             return "int";
-        if (typeid(T) == typeid(double))
+        else if constexpr (std::is_same_v<T, double>)
             return "double";
-        if (typeid(T) == typeid(float))
+        else if constexpr (std::is_same_v<T, float>)
             return "float";
-        if (typeid(T) == typeid(bool))
+        else if constexpr (std::is_same_v<T, bool>)
             return "bool";
-        if (typeid(T) == typeid(std::string))
+        else if constexpr (std::is_same_v<T, std::string>)
             return "string";
-        return "unknown";
+        else
+            return "unknown";
     }
 
 private:
